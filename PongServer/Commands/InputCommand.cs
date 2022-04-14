@@ -11,35 +11,49 @@ namespace PongServer.Commands
     {
         public void Run(NetServer server, NetIncomingMessage inc, Player player, List<Player> players, uint sequence)
         {
-            var name = inc.ReadString();
+            var UUID = inc.ReadInt64();
             sequence = inc.ReadUInt32();
             var key = (Keys)inc.ReadByte();
-            Console.WriteLine("Receive Input request information " + name + " " + sequence + " " + key);
+            Console.WriteLine("Receive Input request information " + UUID + " " + sequence + " " + key);
 
-            player = players.FirstOrDefault(p => p.Name == name);
+            player = players.FirstOrDefault(p => p.UUID == UUID);
             if (player == null)
             {
-                Console.WriteLine("Could not find player with name {0}", name);
+                Console.WriteLine("Could not find player with name {0}", UUID);
                 return;
             }
+
+
+
+            float x = 0;
+            float y = 0;
 
             switch (key)
             {
                 case Keys.Left:
-                    player.X-=10;
+                    x-= 10;
                     break;
 
                 case Keys.Right:
-                    player.X+=10;
+                    x += 10;
                     break;
 
                 case Keys.Down:
-                    player.Y+=10;
+                    y += 10;
                     break;
 
                 case Keys.Up:
-                    player.Y-=10;
+                    y -= 10;
                     break;
+            }
+
+            Console.WriteLine(ManagerCollision.CheckCollision(player, x, y, players, 800, 480));
+
+
+            if (!ManagerCollision.CheckCollision(player, x, y, players, 800, 480))
+            {
+                player.X += x;
+                player.Y += y;
             }
 
             Console.WriteLine("Send the update player to all");

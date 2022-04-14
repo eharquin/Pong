@@ -28,12 +28,15 @@ namespace PongServer.Commands
 
             Console.WriteLine("Create new player");
 
-            player.X = random.Next(0, 750);
-            player.Y = random.Next(0, 420);
+            //player.X = random.Next(0, 75) * 10;
+            //player.Y = random.Next(0, 43) * 10;
 
-            player.Connection = inc.SenderConnection;
+            player.X = 600;
+            player.Y = 200;
 
-            Console.WriteLine("Initialize " + "[" + player.Name + "] to position " + player.X + " " + player.Y);
+            player.UUID = inc.SenderConnection.RemoteUniqueIdentifier;
+
+            Console.WriteLine("Initialize " + "[" + player.UUID + "] to position " + player.X + " " + player.Y);
             players.Add(player);
 
             return player;

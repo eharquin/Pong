@@ -5,14 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
-using System.Threading;
 using Microsoft.Xna.Framework.Input;
 
 namespace Pong
 {
-    public class NetworkManager
+    public class NetworkManager : GameComponent, IServiceProvider
     {
-        private NetClient _client;
+        private NetClient client;
 
         public Player Player { get; set; }
         public List<Player> Others { get; set; }
@@ -22,16 +21,16 @@ namespace Pong
         public bool Reconciliation { get; set; }
         public bool Interpolation { get; set; }
 
-        private uint _sequence;
+        private uint sequence;
 
-        private List<(uint sequence, Keys input)> _pending_inputs;
+        private readonly List<(uint sequence, Keys input)> pendinginputs;
 
-        public NetworkManager(int lag, bool prediction, bool reconciliation, bool interpolation)
+        public NetworkManager(Game game, int lag, bool prediction, bool reconciliation, bool interpolation) : base(game)
         {
             var config = new NetPeerConfiguration("Pong");
             config.SimulatedMinimumLatency = 0.200f;
             config.SimulatedRandomLatency = (float) lag/1000;
-            _client = new NetClient(config);
+            client = new NetClient(config);
 
             Prediction = prediction;
             Reconciliation = reconciliation;
@@ -40,20 +39,20 @@ namespace Pong
             Player = new Player();
             Others = new List<Player>();
 
-            _sequence = 0;
-            _pending_inputs = new List<(uint sequence, Keys input)>();
+            sequence = 0;
+            pendinginputs = new List<(uint sequence, Keys input)>();
 
         }
 
         public bool Start()
         {
-            _client.Start();
+            client.Start();
 
-            var outmsg = _client.CreateMessage();
+            var outmsg = client.CreateMessage();
 
             outmsg.Write((byte)PacketType.Connect);
 
-            _client.Connect("localhost", 14241, outmsg);
+            client.Connect("localhost", 14241, outmsg);
 
             return EstablishInfo();
         }
@@ -66,7 +65,7 @@ namespace Pong
 
             while (time + delay > DateTime.Now)
             {
-                var inc = _client.ReadMessage();
+                var inc = client.ReadMessage();
 
                 if (inc == null) continue;
 
@@ -92,14 +91,16 @@ namespace Pong
                             case NetConnectionStatus.RespondedConnect:
                                 break;
                             case NetConnectionStatus.Connected:
-                                var outmsg = _client.CreateMessage();
+                                var outmsg = client.CreateMessage();
 
                                 Player.Name = "Pong" + DateTime.Now.Millisecond;
+                                Player.UUID = client.UniqueIdentifier;
 
                                 outmsg.Write((byte)PacketType.Login);
                                 outmsg.Write(Player.Name);
 
-                                _client.SendMessage(outmsg, NetDeliveryMethod.ReliableOrdered);
+
+                                client.SendMessage(outmsg, NetDeliveryMethod.ReliableOrdered);
                                 return true;
 
                             case NetConnectionStatus.Disconnecting:
@@ -114,11 +115,11 @@ namespace Pong
             return false;
         }
 
-        public void Update(GameTime gameTime)
+        public override void Update(GameTime gameTime)
         {
             NetIncomingMessage inc;
 
-            while ((inc = _client.ReadMessage()) != null)
+            while ((inc = client.ReadMessage()) != null)
             {
                 Debug.WriteLine(inc.MessageType);
 
@@ -153,6 +154,10 @@ namespace Pong
                             case PacketType.PlayerPositionUpdate:
                                 PlayerPositionUpdate(inc);
                                 break;
+
+                            case PacketType.DisconnectPlayer:
+                                DisconnectPlayer(inc);
+                                break;
                         }
                         break;
                     case NetIncomingMessageType.Receipt:
@@ -179,6 +184,27 @@ namespace Pong
             }
         }
 
+        private void DisconnectPlayer(NetIncomingMessage inc)
+        {
+
+            var UUID = inc.ReadInt64();
+
+            var player = Others.FirstOrDefault(p => p.UUID == UUID);
+            if (player == null)
+            {
+                Console.WriteLine("Could not find player with name {0}", inc.SenderConnection);
+                return;
+            }
+
+            var b = Others.Remove(player);
+
+        }
+
+        public void Disconnect()
+        {
+            client.Disconnect("ciao");
+        }
+
         private void PlayerPositionUpdate(NetIncomingMessage inc)
         {
             var seq = inc.ReadUInt32();
@@ -197,13 +223,14 @@ namespace Pong
             {
                 // server reconciliation Reapply all the inputs not yet processed by the server
                 var j = 0;
-                while (j < _pending_inputs.Count)
+                while (j < pendinginputs.Count)
                 {
-                    var input = _pending_inputs[j];
+                    var input = pendinginputs[j];
+
                     if (input.sequence <= seq)
                     {
                         // Already processed. Its effect is already taken in account into the world update we just go, we can drop it
-                        _pending_inputs.RemoveAt(j);
+                        pendinginputs.RemoveAt(j);
                     }
                     else
                     {
@@ -234,7 +261,7 @@ namespace Pong
             }
             else
             {
-                _pending_inputs.Clear();
+                pendinginputs.Clear();
             }
         }
 
@@ -244,6 +271,8 @@ namespace Pong
             Player.Y = inc.ReadFloat();
 
             ReadAllPlayer(inc);
+
+            Debug.WriteLine(client.UniqueIdentifier);
         }
 
         private void ReadPLayer(NetIncomingMessage inc)
@@ -251,14 +280,16 @@ namespace Pong
             var player = new Player();
             inc.ReadAllProperties(player);
 
+            Debug.WriteLine(player.UUID +"     " + Player.UUID);
 
-            if (player.Name == Player.Name)
+
+            if (player.UUID == Player.UUID)
             {
-
+                Debug.WriteLine("receive self");
             }
-            else if (Others.Any(p => p.Name == player.Name))
+            else if (Others.Any(p => p.UUID == player.UUID))
             {
-                var oldPlayer = Others.FirstOrDefault(p => p.Name == player.Name);
+                var oldPlayer = Others.FirstOrDefault(p => p.UUID == player.UUID);
                 oldPlayer.X = player.X;
                 oldPlayer.Y = player.Y;
             }
@@ -283,32 +314,52 @@ namespace Pong
             if (Prediction)
             {
                 var pos = PredictInput(input);
-                Player.X += pos.x;
-                Player.Y += pos.y;
+
+                Console.WriteLine("Collision : " + ManagerCollision.CheckCollision(Player, pos.x, pos.y, Others, 800, 480));
+
+
+                if (!ManagerCollision.CheckCollision(Player, pos.x, pos.y, Others, 800, 480))
+                {
+                    Player.X += pos.x;
+                    Player.Y += pos.y;
+
+                    pendinginputs.Add((sequence, input));
+
+                    var outmsg = client.CreateMessage();
+                    outmsg.Write((byte)PacketType.Input);
+                    outmsg.Write(Player.UUID);
+                    outmsg.Write(sequence);
+                    outmsg.Write((byte)input);
+
+                    client.SendMessage(outmsg, NetDeliveryMethod.ReliableOrdered);
+
+                    ++sequence;
+                }
             }
 
+            else
+            {
+                var pos = PredictInput(input);
 
-            _pending_inputs.Add((_sequence, input));
+                if (!ManagerCollision.CheckCollision(Player, pos.x, pos.y, Others, 800, 480))
+                {
+                    pendinginputs.Add((sequence, input));
 
-            
-            Debug.WriteLine("Predict input " + input + " " + Player.X + " " + Player.Y);
-            
+                    var outmsg = client.CreateMessage();
+                    outmsg.Write((byte)PacketType.Input);
+                    outmsg.Write(Player.UUID);
+                    outmsg.Write(sequence);
+                    outmsg.Write((byte)input);
 
-            var outmsg = _client.CreateMessage();
-            outmsg.Write((byte)PacketType.Input);
-            outmsg.Write(Player.Name);
-            outmsg.Write(_sequence);
-            outmsg.Write((byte)input);
-            
-            _client.SendMessage(outmsg, NetDeliveryMethod.ReliableOrdered);
-            Debug.WriteLine("Send Input request " + Player.Name + " " + _sequence + " " + input);
+                    client.SendMessage(outmsg, NetDeliveryMethod.ReliableOrdered);
 
-            ++_sequence;
+                    ++sequence;
+                }
+            }
         }
 
         private (float x, float y) PredictInput(Keys input)
         {
-
             float x = 0f, y = 0f;
 
             switch (input)
@@ -330,6 +381,11 @@ namespace Pong
                     break;
             }
             return (x, y);
+        }
+
+        public object GetService(Type serviceType)
+        {
+            return this;
         }
     }
 }

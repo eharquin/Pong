@@ -1,0 +1,3 @@
+﻿C:\Users\Harquin\source\repos\Pong\PongLibrary\Data.cs
+C:\Users\Harquin\source\repos\Pong\PongLibrary\ManagerCollision.cs
+C:\Users\Harquin\source\repos\Pong\PongLibrary\Player.cs

@@ -1,11 +1,17 @@
-﻿namespace PongServer
+﻿using System;
+using System.Windows.Forms;
+
+namespace PongServer
 {
     static class Program
     {
+        [STAThread]
         static void Main(string[] args)
         {
-            Server server = new Server();
-            server.Run();
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(true);
+            Application.Run(new MainForm());
+
         }
     }
 }

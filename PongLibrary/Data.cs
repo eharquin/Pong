@@ -6,5 +6,6 @@
     AllPlayers,
     Input,
     InitialData,
-    PlayerPositionUpdate
+    PlayerPositionUpdate,
+    DisconnectPlayer,
 }

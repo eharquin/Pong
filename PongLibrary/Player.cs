@@ -9,8 +9,10 @@ namespace PongLibrary
         public float X { get; set; }
         public float Y { get; set; }
 
-        public NetConnection Connection { get; set; }
+        public static readonly float Width = 20;
+        public static readonly float Height = 120;
 
+        public long UUID { get; set; }
 
         public Player()
         {

@@ -5,76 +5,84 @@ using Lidgren.Network;
 using Microsoft.Xna.Framework.Input;
 using PongLibrary;
 using PongServer.Commands;
+using PongServer.Manager;
+using PongServer.Util;
 
 namespace PongServer
 {
     public class Server
     {
-        private NetServer _server;
-        private List<Player> _players;
+        private NetServer server;
+        private List<Player> players;
 
-        private int _updatePerSecond;
+        private ManagerLogger managerLogger;
 
-        public Server()
+        public Server(ManagerLogger managerLogger)
         {
-            _players = new List<Player>();
-
+            players = new List<Player>();
+            this.managerLogger = new ManagerLogger(LogCategory.Debug);
             var config = new NetPeerConfiguration("Pong");
-            config.Port = 14241;
-            config.SimulatedMinimumLatency = 0.200f;
-            config.EnableMessageType(NetIncomingMessageType.ConnectionApproval);
+            managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Set applIdentifier to \"Pong\"");
 
-            _server = new NetServer(config);
+            config.Port = 14241;
+            managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Set server port to 14241");
+
+            config.SimulatedMinimumLatency = 0.200f;
+            managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Set server SimulatedMinimumLatency to 200ms");
+
+            config.EnableMessageType(NetIncomingMessageType.ConnectionApproval);
+            managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Enable message type NetIncomingMessageType.ConnectionApproval");
+
+
+            server = new NetServer(config);
         }
 
 
         public void Run()
         {
-            _server.Start();
-
-            Console.WriteLine("Server started..." + Environment.NewLine);
-
+            server.Start();
+            managerLogger.AddLogMessage(LogCategory.Info, "Server", "Server started...");
+            
 
             while (true)
             {
 
-                NetIncomingMessage inc = _server.ReadMessage();
+                NetIncomingMessage inc = server.ReadMessage();
 
                 if (inc == null) continue;
 
-                Console.WriteLine("Message receive: " + inc.MessageType.ToString());
+                managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Message receive: " + inc.MessageType.ToString());
 
                 switch (inc.MessageType)
                 {
                     case NetIncomingMessageType.Error:
-                        Console.WriteLine(inc.ReadString());
+                        managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Error: " + inc.ReadString());
                         break;
                     case NetIncomingMessageType.DebugMessage:
-                        Console.WriteLine(inc.ReadString());
+                        managerLogger.AddLogMessage(LogCategory.Debug, "Server", "DebugMessage: " + inc.ReadString());
                         break;
                     case NetIncomingMessageType.StatusChanged:
                         StatusChangedMessage(inc);
                         break;
                     case NetIncomingMessageType.ConnectionApproval:
                         var connectionApproval = new ConnectionApprovalCommand();
-                        connectionApproval.Run(_server, inc, null, null, 0);
+                        connectionApproval.Run(server, inc, null, null, 0);
                         break;
                     case NetIncomingMessageType.Data:
                         DataMessage(inc);
                         break;
                     case NetIncomingMessageType.WarningMessage:
-                        Console.WriteLine(inc.ReadString());
+                        managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Warning: " + inc.ReadString());
                         break;
                 }
-
-                Console.WriteLine(Environment.NewLine);
             }
         }
 
         private void StatusChangedMessage(NetIncomingMessage inc)
         {
             var status = (NetConnectionStatus)inc.ReadByte();
-            Console.WriteLine(status.ToString());
+            managerLogger.AddLogMessage(LogCategory.Debug, "Server", "NetConnectionStatus: " + status.ToString());
+
             switch (status)
             {
                 case NetConnectionStatus.None:
@@ -88,11 +96,15 @@ namespace PongServer
                 case NetConnectionStatus.RespondedConnect:
                     break;
                 case NetConnectionStatus.Connected:
-                    Console.WriteLine(inc.SenderConnection + " is connected. Waiting for login info...");
+                    managerLogger.AddLogMessage(LogCategory.Debug, "Server", inc.SenderConnection + " is connected. Waiting for login info...");
                     break;
                 case NetConnectionStatus.Disconnecting:
+                    var command1 = new DisconnectCommand();
+                    command1.Run(server, inc, null, players, 0);
                     break;
                 case NetConnectionStatus.Disconnected:
+                    var command = new DisconnectCommand();
+                    command.Run(server, inc, null, players, 0);
                     break;
             }
         }
@@ -102,7 +114,7 @@ namespace PongServer
         {
             var packetType = (PacketType)inc.ReadByte();
             var command = CommandFactory.GetCommand(packetType);
-            command.Run(_server, inc, null, _players, 0);
+            command.Run(server, inc, null, players, 0);
         }
     }
 }
