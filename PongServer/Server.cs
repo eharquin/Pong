@@ -1,28 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Lidgren.Network;
-using Microsoft.Xna.Framework.Input;
 using PongLibrary;
 using PongServer.Commands;
 using PongServer.Manager;
 using PongServer.Util;
+
 
 namespace PongServer
 {
     public class Server
     {
         private NetServer server;
-        private List<Player> players;
+
+        private List<PlayerConnection> playerConnections;
+        private Ball ball;
 
         private ManagerLogger managerLogger;
+        private int timeStep;
 
         public Server(ManagerLogger managerLogger)
         {
-            players = new List<Player>();
+            this.playerConnections = new List<PlayerConnection>();
+
+            this.ball = new Ball();
+            this.ball.X = 640;
+            this.ball.Y = 360;
+
+            this.ball.SpeedX = 0;
+            this.ball.SpeedY = 0;
+
             this.managerLogger = new ManagerLogger(LogCategory.Debug);
+
+            this.timeStep = 0;
+            
             var config = new NetPeerConfiguration("Pong");
-            managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Set applIdentifier to \"Pong\"");
+            managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Set appIdentifier to \"Pong\"");
 
             config.Port = 14241;
             managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Set server port to 14241");
@@ -33,20 +46,33 @@ namespace PongServer
             config.EnableMessageType(NetIncomingMessageType.ConnectionApproval);
             managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Enable message type NetIncomingMessageType.ConnectionApproval");
 
+            config.MaximumConnections = 2;
+            managerLogger.AddLogMessage(LogCategory.Debug, "Server", "Set maximun connections accepted to 2");
 
             server = new NetServer(config);
         }
 
-
+        
         public void Run()
         {
             server.Start();
             managerLogger.AddLogMessage(LogCategory.Info, "Server", "Server started...");
-            
+
+            var time = DateTime.Now;
+            TimeSpan Delay = new TimeSpan(0, 0, 0, 0, 100);
 
             while (true)
             {
 
+                if (time + Delay <= DateTime.Now)
+                {
+                    var snapshotCommand = new SnapshotCommand();
+                    snapshotCommand.Run(server, null, playerConnections, timeStep, ball);
+
+                    time = DateTime.Now;
+                    this.timeStep++;
+                }
+                
                 NetIncomingMessage inc = server.ReadMessage();
 
                 if (inc == null) continue;
@@ -65,8 +91,8 @@ namespace PongServer
                         StatusChangedMessage(inc);
                         break;
                     case NetIncomingMessageType.ConnectionApproval:
-                        var connectionApproval = new ConnectionApprovalCommand();
-                        connectionApproval.Run(server, inc, null, null, 0);
+                        var connectionApprove = new ConnectionApproveCommand();
+                        connectionApprove.Run(server, inc, playerConnections, timeStep, ball);
                         break;
                     case NetIncomingMessageType.Data:
                         DataMessage(inc);
@@ -99,22 +125,21 @@ namespace PongServer
                     managerLogger.AddLogMessage(LogCategory.Debug, "Server", inc.SenderConnection + " is connected. Waiting for login info...");
                     break;
                 case NetConnectionStatus.Disconnecting:
-                    var command1 = new DisconnectCommand();
-                    command1.Run(server, inc, null, players, 0);
+                    //var command1 = new DisconnectCommand();
+                    //command1.Run(server, inc, null, players, 0);
                     break;
                 case NetConnectionStatus.Disconnected:
-                    var command = new DisconnectCommand();
-                    command.Run(server, inc, null, players, 0);
+                    //var command = new DisconnectCommand();
+                    //command.Run(server, inc, null, players, 0);
                     break;
             }
         }
-
 
         private void DataMessage(NetIncomingMessage inc)
         {
             var packetType = (PacketType)inc.ReadByte();
             var command = CommandFactory.GetCommand(packetType);
-            command.Run(server, inc, null, players, 0);
+            command.Run(server, inc, playerConnections, timeStep, this.ball);
         }
     }
 }

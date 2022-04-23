@@ -4,25 +4,24 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PongServer.Commands
+namespace PongServer.Commands.Old
 {
-    class UpdatePositionCommand : ICommand
+    class InitialDataCommand : ICommand
     {
         public void Run(NetServer server, NetIncomingMessage inc, Player player, List<Player> players, uint sequence)
         {
             var outmsg = server.CreateMessage();
-            outmsg.Write((byte)PacketType.PlayerPositionUpdate);
-            outmsg.Write(sequence);
+            outmsg.Write((byte)PacketType.InitialData);
             outmsg.Write(player.X);
             outmsg.Write(player.Y);
 
+            outmsg.Write(players.Count);
+            foreach (var p in players)
+            {
+                outmsg.WriteAllProperties(p);
+            }
 
             server.SendMessage(outmsg, inc.SenderConnection, NetDeliveryMethod.ReliableOrdered);
-
-            var command = new PlayerToAllCommand();
-            command.Run(server, inc, player, players, sequence);
-
-            Console.WriteLine("Send pos: " + player.X + " " + player.Y);
         }
     }
 }

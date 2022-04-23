@@ -3,7 +3,7 @@ using PongLibrary;
 using System;
 using System.Collections.Generic;
 
-namespace PongServer.Commands
+namespace PongServer.Commands.Old
 {
     class PlayerToAllCommand : ICommand
     {

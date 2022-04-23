@@ -8,4 +8,6 @@
     InitialData,
     PlayerPositionUpdate,
     DisconnectPlayer,
+    Snapshot,
+    InitialSnapshot,
 }

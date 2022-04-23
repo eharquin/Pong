@@ -5,25 +5,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace PongServer.Commands
+namespace PongServer.Commands.Old
 {
     class InputCommand : ICommand
     {
-        public void Run(NetServer server, NetIncomingMessage inc, List<PlayerConnection> playerConnections, int timeStep, Ball ball)
+        public void Run(NetServer server, NetIncomingMessage inc, Player player, List<Player> players, uint sequence)
         {
             var UUID = inc.ReadInt64();
-            uint sequence = inc.ReadUInt32();
+            sequence = inc.ReadUInt32();
             var key = (Keys)inc.ReadByte();
             Console.WriteLine("Receive Input request information " + UUID + " " + sequence + " " + key);
 
-            PlayerConnection playerConnection = playerConnections.FirstOrDefault(p => p.UUID == UUID);
-            if (playerConnection == null)
+            player = players.FirstOrDefault(p => p.UUID == UUID);
+            if (player == null)
             {
                 Console.WriteLine("Could not find player with name {0}", UUID);
                 return;
             }
-
-            playerConnection.Sequence = sequence;
 
             float x = 0;
             float y = 0;
@@ -47,11 +45,14 @@ namespace PongServer.Commands
                     break;
             }
 
-            if (!ManagerCollision.CheckCollision(playerConnection, x, y, playerConnections.ToList<Player>(), World.WorldWidth, World.WorldHeight))
+            if (!ManagerCollision.CheckCollision(player, x, y, players, World.WorldWidth, World.WorldHeight))
             {
-                playerConnection.X += x;
-                playerConnection.Y += y;
+                player.X += x;
+                player.Y += y;
             }
+
+            var command = new UpdatePositionCommand();
+            command.Run(server, inc, player, players, sequence);
         }
     }
 }

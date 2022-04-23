@@ -2,20 +2,17 @@
 using PongLibrary;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
-namespace PongServer.Commands
+namespace PongServer.Commands.Old
 {
-    class InitialDataCommand : ICommand
+    class AllPlayersToOneCommand : ICommand
     {
         public void Run(NetServer server, NetIncomingMessage inc, Player player, List<Player> players, uint sequence)
         {
             var outmsg = server.CreateMessage();
-            outmsg.Write((byte)PacketType.InitialData);
-            outmsg.Write(player.X);
-            outmsg.Write(player.Y);
-
+            outmsg.Write((byte)PacketType.AllPlayers);
             outmsg.Write(players.Count);
+
             foreach (var p in players)
             {
                 outmsg.WriteAllProperties(p);

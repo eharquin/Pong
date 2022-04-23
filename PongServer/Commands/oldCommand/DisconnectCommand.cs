@@ -4,12 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace PongServer.Commands
+namespace PongServer.Commands.Old
 {
     public class DisconnectCommand : ICommand
     {
         public void Run(NetServer server, NetIncomingMessage inc, Player player, List<Player> players, uint sequence)
         {
+            /// TODO: Update l'état du world
             var connection = server.Connections.FirstOrDefault(c => c == inc.SenderConnection) ;
             if (connection == null)
             {
@@ -29,7 +30,7 @@ namespace PongServer.Commands
             Console.WriteLine("Remove player from the list");
 
             var command = new DisconnectToAllCommand();
-            command.Run(server, inc, player, players, 0);
+            command.Run(server, inc, player, players, sequence);
         }
     }
 }

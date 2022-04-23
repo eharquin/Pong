@@ -6,9 +6,9 @@ namespace Pong
     public static class Program
     {
         [STAThread]
-        static void Main(string[] args)
+        static void Main()
         {
-            using (var game = new Game1(args))
+            using (var game = new Game1())
                 game.Run();
         }
     }

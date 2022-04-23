@@ -10,16 +10,15 @@ namespace PongLibrary
     {
         public static bool CheckCollision(Player player, float X, float Y, List<Player> players, int width, int height)
         {
-
             Vector2 nextPos = new Vector2(player.X + X, player.Y + Y);
 
-            var rec = new Rectangle((int)(nextPos.X - Player.Width/2), (int)(nextPos.Y-Player.Height/2), (int)Player.Width, (int)Player.Height);
+            var rec = new Rectangle((int)(nextPos.X - World.PlayerWidth/2), (int)(nextPos.Y- World.PlayerHeight / 2), (int)World.PlayerWidth, (int)World.PlayerHeight);
 
             foreach (var p in players)
             {
                 if (p.UUID != player.UUID)
                 {
-                    if (rec.Intersects(new Rectangle((int)(p.X - Player.Width / 2), (int)(p.Y - Player.Height / 2), (int)Player.Width, (int)Player.Height)))
+                    if (rec.Intersects(new Rectangle((int)(p.X - World.PlayerWidth / 2), (int)(p.Y - World.PlayerHeight / 2), (int)World.PlayerWidth, (int)World.PlayerHeight)))
                     {
                         return true;
                     }
@@ -28,12 +27,9 @@ namespace PongLibrary
 
             var map = new Rectangle(0, 0, width, height);
 
-            Console.WriteLine("map: " + map.Contains(rec));
 
             if (!map.Contains(rec))
             {
-
-                Debug.WriteLine(map + " " + rec);
                 return true;
             }
 

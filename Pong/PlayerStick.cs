@@ -1,16 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using Pong.Input;
+using Pong.Manager.Network;
 using PongLibrary;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace Pong
 {
-    public class PlayerStick : GameObject
+    public class PlayerStick : DrawableGameComponent
     {
         private SpriteBatch spritebatch;
         private NetworkManager networkManager;
@@ -27,8 +23,8 @@ namespace Pong
             this.spritebatch = game.Services.GetService<SpriteBatch>();
             this.networkManager = game.Services.GetService<NetworkManager>();
 
-            this.width = Player.Width;
-            this.height = Player.Height;
+            this.width = World.PlayerWidth;
+            this.height = World.PlayerHeight;
 
             this.basicEffect = new BasicEffect(this.GraphicsDevice);
             this.basicEffect.TextureEnabled = true;
@@ -41,7 +37,7 @@ namespace Pong
             Viewport viewport = game.GraphicsDevice.Viewport;
             basicEffect.Projection = Matrix.CreateOrthographicOffCenter(0f, viewport.Width, viewport.Height, 0f, 0f, 1f);
 
-            Debug.WriteLine(this.Position);
+            //Debug.WriteLine(this.Position);
 
         }
 
@@ -52,25 +48,12 @@ namespace Pong
 
         public override void Update(GameTime gameTime)
         {
-            this.Position = new Vector3(this.networkManager.Player.X, this.networkManager.Player.Y, 0);
-            KeyboardInput keyboard = this.Game.Services.GetService<KeyboardInput>();
-
-            if(keyboard.isKeyPress(Keys.Space))
-            {
-                Console.WriteLine(this.Position);
-            }
+           // this.Position = new Vector3(this.networkManager.Player.X, this.networkManager.Player.Y, 0);
         }
 
         public override void Draw(GameTime gameTime)
         {
             /*
-            spritebatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, rasterizerState: RasterizerState.CullNone, effect: this.basicEffect);
-
-            spritebatch.DrawString(this.spriteFont, this.networkManager.Player.Name, new Vector2(this.Position.X, this.Position.Y), color, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
-
-            spritebatch.End();
-            */
-
             const int shapeVertexCount = 4;
             const int shapeIndexCount = 6;
 
@@ -80,15 +63,6 @@ namespace Pong
             Vector3 v3 = new Vector3(this.Position.X + width / 2, this.Position.Y + height / 2, 0);
             Vector3 v4 = new Vector3(this.Position.X - width / 2, this.Position.Y + height / 2, 0);
 
-            KeyboardInput keyboard = this.Game.Services.GetService<KeyboardInput>();
-
-            if (keyboard.isKeyPress(Keys.Enter))
-            {
-                Console.WriteLine(v1);
-                Console.WriteLine(v2);
-                Console.WriteLine(v3);
-                Console.WriteLine(v4);
-            }
 
             int[] indexData = { 0, 1, 2, 0, 2, 3};
 
@@ -109,6 +83,7 @@ namespace Pong
                 effect.Apply();
                 this.GraphicsDevice.DrawUserIndexedPrimitives<VertexPositionColor>(PrimitiveType.TriangleList, vertexData, 0, shapeVertexCount, indexData, 0, shapeIndexCount / 3);
             }
+            */
         }
     }
 }

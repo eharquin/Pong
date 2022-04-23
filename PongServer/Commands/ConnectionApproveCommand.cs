@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 namespace PongServer.Commands
 {
-    class ConnectionApprovalCommand : ICommand
+    class ConnectionApproveCommand : ICommand
     {
-        public void Run(NetServer server, NetIncomingMessage inc, Player player, List<Player> players, uint sequence)
+        public void Run(NetServer server, NetIncomingMessage inc, List<PlayerConnection> playerConnections, int timeStep, Ball ball)
         {
             var data = inc.ReadByte();
             if (data == (byte)PacketType.Connect)

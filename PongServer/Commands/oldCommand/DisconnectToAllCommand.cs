@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PongServer.Commands
+namespace PongServer.Commands.Old
 {
     class DisconnectToAllCommand : ICommand
     {
