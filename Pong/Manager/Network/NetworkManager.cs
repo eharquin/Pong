@@ -118,10 +118,12 @@ namespace Pong.Manager.Network
 
         public override void Update(GameTime gameTime)
         {
-            if(this.client.ConnectionStatus == NetConnectionStatus.Connected && Interpolation)
-                foreach(Player player in this.Others)
+            if (this.client.ConnectionStatus == NetConnectionStatus.Connected && Interpolation)
+            {
+                foreach (Player player in this.Others)
                     Interpolate(player);
-
+                Interpolate(this.Pong);
+            }
             NetIncomingMessage inc;
 
             while ((inc = this.client.ReadMessage()) != null)
@@ -206,6 +208,7 @@ namespace Pong.Manager.Network
             float ballX = inc.ReadFloat();
             float ballY = inc.ReadFloat();
 
+            this.Pong.PositionBuffer.Add(new Tuple<Vector2, DateTime>(new Vector2(ballX, ballY), DateTime.Now));
             this.Pong.Position = new Vector2(ballX, ballY);
 
             float speedX = inc.ReadFloat();
@@ -263,6 +266,26 @@ namespace Pong.Manager.Network
                     this.Others.Add(player);
                 }
             }
+
+            float ballX = inc.ReadFloat();
+            float ballY = inc.ReadFloat();
+
+            if (Interpolation)
+            {
+                this.Pong.PositionBuffer.Add(new Tuple<Vector2, DateTime>(new Vector2(ballX, ballY), DateTime.Now));
+            }
+            else
+            {
+                this.Pong.Position = new Vector2(ballX, ballY);
+            }
+
+
+            //this.Pong.Position = new Vector2(ballX, ballY);
+
+            float speedX = inc.ReadFloat();
+            float speedY = inc.ReadFloat();
+
+            this.Pong.Speed = new Vector2(speedX, speedY);
         }
 
         private void Interpolate(Player player)
@@ -288,6 +311,33 @@ namespace Pong.Manager.Network
 
                 player.X = (float)(pos0.X + (pos1.X - pos0.X) * (render_timestamp - t0).TotalMilliseconds / (t1 - t0).TotalMilliseconds);
                 player.Y = (float)(pos0.Y + (pos1.Y - pos0.Y) * (render_timestamp - t0).TotalMilliseconds / (t1 - t0).TotalMilliseconds);
+
+            }
+        }
+
+        private void Interpolate(Pong pong)
+        {
+
+            DateTime now = DateTime.Now;
+            DateTime render_timestamp = now - new TimeSpan(0, 0, 0, 0, 100);
+
+            var buffer = pong.PositionBuffer;
+
+            while (buffer.Count >= 2 && buffer[1].Item2 <= render_timestamp)
+            {
+                buffer.RemoveAt(0);
+            }
+
+            // Interpolate between the two surrounding authoritative positions.
+            if (buffer.Count >= 2 && buffer[0].Item2 <= render_timestamp && render_timestamp <= buffer[1].Item2)
+            {
+                var pos0 = buffer[0].Item1;
+                var pos1 = buffer[1].Item1;
+                var t0 = buffer[0].Item2;
+                var t1 = buffer[1].Item2;
+
+                pong.Position.X = (float)(pos0.X + (pos1.X - pos0.X) * (render_timestamp - t0).TotalMilliseconds / (t1 - t0).TotalMilliseconds);
+                pong.Position.Y = (float)(pos0.Y + (pos1.Y - pos0.Y) * (render_timestamp - t0).TotalMilliseconds / (t1 - t0).TotalMilliseconds);
 
             }
         }

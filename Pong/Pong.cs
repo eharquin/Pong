@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using System;
 using Pong.Manager.Graphics;
 using PongLibrary;
+using System.Collections.Generic;
 
 namespace Pong
 {
@@ -18,6 +19,8 @@ namespace Pong
         public Vector2 Position;
 
         private Color pongColor;
+
+        public List<Tuple<Vector2, DateTime>> PositionBuffer = new List<Tuple<Vector2, DateTime>>();
 
         private static readonly Rectangle wallUp = new Rectangle(0, 0, 1280, 1);
         private static readonly Rectangle wallDown = new Rectangle(0, 720, 1280, 720);
@@ -90,8 +93,6 @@ namespace Pong
 
             SpriteManager spriteManager = this.Game.Services.GetService<SpriteManager>();
             spriteManager.Begin(null);
-
-            Console.WriteLine(this.border);
 
             spriteManager.Draw(this.border, Vector2.Zero, new Vector2(this.Position.X, this.Position.Y), Color.Black);
             spriteManager.Draw(this.circle, Vector2.Zero, new Vector2(this.Position.X, this.Position.Y), this.pongColor);

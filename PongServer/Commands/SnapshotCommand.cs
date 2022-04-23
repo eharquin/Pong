@@ -27,6 +27,13 @@ namespace PongServer.Commands
                     outmsg.Write(playerConnectionEmit.X);
                     outmsg.Write(playerConnectionEmit.Y);
                 }
+
+                outmsg.Write(ball.X);
+                outmsg.Write(ball.Y);
+
+                outmsg.Write(ball.SpeedX);
+                outmsg.Write(ball.SpeedY);
+
                 server.SendMessage(outmsg, playerConnection.Connection, NetDeliveryMethod.ReliableOrdered);
             }
         }

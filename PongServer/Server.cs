@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 using Lidgren.Network;
 using PongLibrary;
 using PongServer.Commands;
@@ -16,6 +18,11 @@ namespace PongServer
         private List<PlayerConnection> playerConnections;
         private Ball ball;
 
+        private static readonly Rectangle wallUp = new Rectangle(0, 0, 1280, 1);
+        private static readonly Rectangle wallDown = new Rectangle(0, 720, 1280, 720);
+        private static readonly Rectangle wallLeft = new Rectangle(1280, 0, 1280, 720);
+        private static readonly Rectangle wallRight = new Rectangle(0, 0, 1, 720);
+
         private ManagerLogger managerLogger;
         private int timeStep;
 
@@ -27,8 +34,8 @@ namespace PongServer
             this.ball.X = 640;
             this.ball.Y = 360;
 
-            this.ball.SpeedX = 0;
-            this.ball.SpeedY = 0;
+            this.ball.SpeedX = 5;
+            this.ball.SpeedY = 5;
 
             this.managerLogger = new ManagerLogger(LogCategory.Debug);
 
@@ -58,19 +65,55 @@ namespace PongServer
             server.Start();
             managerLogger.AddLogMessage(LogCategory.Info, "Server", "Server started...");
 
-            var time = DateTime.Now;
-            TimeSpan Delay = new TimeSpan(0, 0, 0, 0, 100);
+            DateTime timeSnapshot = DateTime.Now;
+            DateTime timeBallUpdate = DateTime.Now;
+            TimeSpan delaySnapshot = new TimeSpan(0, 0, 0, 0, 100);
+            TimeSpan delayBallUpdate = new TimeSpan(0, 0, 0, 0, 10);
 
             while (true)
             {
 
-                if (time + Delay <= DateTime.Now)
+                if (timeSnapshot + delaySnapshot <= DateTime.Now)
                 {
                     var snapshotCommand = new SnapshotCommand();
                     snapshotCommand.Run(server, null, playerConnections, timeStep, ball);
 
-                    time = DateTime.Now;
+                    timeSnapshot = DateTime.Now;
                     this.timeStep++;
+                }
+
+                if(timeBallUpdate + delayBallUpdate <= DateTime.Now)
+                {
+                    int res = Ball.CheckWallCollision((int)this.ball.X, (int)this.ball.Y, (int)Ball.radius);
+
+                    switch (res)
+                    {
+                        case 0:
+                            break;
+                        case 1:
+                            this.ball.SpeedY = -this.ball.SpeedY;
+                            break;
+                        case 2:
+                            this.ball.SpeedY = -this.ball.SpeedY;
+                            break;
+                        case 3:
+                            this.ball.SpeedX = -this.ball.SpeedX;
+                            break;
+                        case 4:
+                            this.ball.SpeedX = -this.ball.SpeedX;
+                            break;
+                    }
+
+                    if(Ball.CheckPlayerCollision((int)this.ball.X, (int)this.ball.Y, (int)Ball.radius, this.playerConnections.ToList<Player>()))
+                    {
+                        this.ball.SpeedX = -this.ball.SpeedX;
+                    }
+
+
+                    this.ball.X += this.ball.SpeedX;
+                    this.ball.Y += this.ball.SpeedY;
+
+                    timeBallUpdate = DateTime.Now;
                 }
                 
                 NetIncomingMessage inc = server.ReadMessage();
